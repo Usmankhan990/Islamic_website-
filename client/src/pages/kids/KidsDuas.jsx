@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-
-const API_BASE = 'http://localhost:5000/api';
+import { API_BASE } from '../../services/api';
 
 const DUAS = [
   {
@@ -154,9 +153,9 @@ const CATEGORIES = [
   { key: 'study', label: '📚 Study' }
 ];
 
-// Build TTS audio URL via backend proxy
+// Build TTS audio URL via Edge Neural TTS backend
 function ttsUrl(text, lang) {
-  return `${API_BASE}/tts?text=${encodeURIComponent(text)}&lang=${lang}`;
+  return `${API_BASE}/tts?text=${encodeURIComponent(text)}&lang=${lang}&speed=slow`;
 }
 
 export default function KidsDuas() {

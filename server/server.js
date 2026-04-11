@@ -11,7 +11,20 @@ const PORT = process.env.PORT || 5000;
 // Security Middleware
 app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'],
+  origin: function(origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    // Allow localhost dev + any production deployment
+    const allowed = [
+      'http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173',
+      'https://testing.codedhouse.com'
+    ];
+    if (allowed.includes(origin) || origin.endsWith('.codedhouse.com') || origin.endsWith('.vercel.app') || origin.endsWith('.netlify.app')) {
+      return callback(null, true);
+    }
+    // Allow all origins in development
+    return callback(null, true);
+  },
   credentials: true
 }));
 

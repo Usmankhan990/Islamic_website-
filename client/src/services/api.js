@@ -1,7 +1,10 @@
 import axios from 'axios';
 
+// Environment-aware API base URL — set VITE_API_URL for production
+export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' }
 });
 

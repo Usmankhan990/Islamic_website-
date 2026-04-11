@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getSurahs, getSurahWithTranslation, getSurahWithAudio, TRANSLATIONS, RECITERS } from '../services/quranApi';
+import { API_BASE } from '../services/api';
 
 export default function Quran() {
   const [surahs, setSurahs] = useState([]);
@@ -120,7 +121,7 @@ export default function Quran() {
                     language === 'tr' ? 'tr' : language === 'de' ? 'de' : 
                     language === 'es' ? 'es' : language === 'ru' ? 'ru' : 'en';
     
-    const url = `http://localhost:5000/api/tts?text=${encodeURIComponent(text)}&lang=${ttsLang}`;
+    const url = `${API_BASE}/tts?text=${encodeURIComponent(text)}&lang=${ttsLang}&speed=slow`;
     const audio = new Audio(url);
     ttsAudioRef.current = audio;
     
