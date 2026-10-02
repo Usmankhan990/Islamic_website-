@@ -1,38 +1,40 @@
 import { Link } from 'react-router-dom';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export default function Footer() {
+  const { t } = useLanguage();
   return (
     <footer className="site-footer">
       <div className="container">
         <div className="footer-grid">
           <div className="footer-brand">
             <h3>🕌 Noor<span style={{ color: 'var(--accent)' }}>Academy</span></h3>
-            <p>A comprehensive Islamic learning platform for all ages. Learn Quran, Hadith, and Islamic knowledge in a beautiful and engaging way.</p>
+            <p>{t('A comprehensive Islamic learning platform for all ages. Learn Quran, Hadith, and Islamic knowledge in a beautiful and engaging way.')}</p>
           </div>
           <div className="footer-links">
-            <h4>Learn</h4>
-            <Link to="/quran">📖 Quran</Link>
-            <Link to="/hadith">📚 Hadith</Link>
-            <Link to="/fiqh">⚖️ Fiqh</Link>
-            <Link to="/prayer">🕐 Prayer Times</Link>
+            <h4>{t('Learn')}</h4>
+            <Link to="/quran">📖 {t('Quran')}</Link>
+            <Link to="/hadith">📚 {t('Hadith')}</Link>
+            <Link to="/fiqh">⚖️ {t('Fiqh')}</Link>
+            <Link to="/prayer">🕐 {t('Prayer Times')}</Link>
           </div>
           <div className="footer-links">
-            <h4>Engage</h4>
-            <Link to="/kids/games">🎮 Kids Games</Link>
-            <Link to="/kids/leaderboard">🏆 Leaderboard</Link>
-            <Link to="/classes">🎓 Live Classes</Link>
-            <Link to="/kids/competitions">🏅 Competitions</Link>
+            <h4>{t('Engage')}</h4>
+            <Link to="/kids/games">🎮 {t('Kids Games')}</Link>
+            <Link to="/kids/leaderboard">🏆 {t('Leaderboard')}</Link>
+            <Link to="/classes">🎓 {t('Live Classes')}</Link>
+            <Link to="/kids/competitions">🏅 {t('Competitions')}</Link>
           </div>
           <div className="footer-links">
-            <h4>Platform</h4>
-            <Link to="/register">📝 Sign Up</Link>
-            <Link to="/reviews">⭐ Reviews</Link>
-            <Link to="/login">🔑 Login</Link>
+            <h4>{t('Platform')}</h4>
+            <Link to="/register">📝 {t('Sign Up')}</Link>
+            <Link to="/reviews">⭐ {t('Reviews')}</Link>
+            <Link to="/login">🔑 {t('Login')}</Link>
           </div>
         </div>
         <div className="footer-bottom">
           <p>بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
-          <p>© {new Date().getFullYear()} NoorAcademy. Built with ❤️ for the Ummah.</p>
+          <p>© {new Date().getFullYear()} NoorAcademy. {t('Built with ❤️ for the Ummah.')}</p>
         </div>
       </div>
       <style>{`

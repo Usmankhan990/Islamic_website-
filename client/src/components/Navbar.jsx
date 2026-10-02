@@ -1,11 +1,13 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useState } from 'react';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export default function Navbar() {
   const { user, logout, isAdmin } = useAuth();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { t, lang, setLang, languages } = useLanguage();
 
   const isActive = (path) => location.pathname === path ? 'active' : '';
 
@@ -18,27 +20,31 @@ export default function Navbar() {
         </Link>
 
         <div className={`navbar-links ${mobileOpen ? 'open' : ''}`}>
-          <Link to="/quran" className={`nav-link ${isActive('/quran')}`} onClick={() => setMobileOpen(false)}>📖 Quran</Link>
-          <Link to="/hadith" className={`nav-link ${isActive('/hadith')}`} onClick={() => setMobileOpen(false)}>📚 Hadith</Link>
-          <Link to="/fiqh" className={`nav-link ${isActive('/fiqh')}`} onClick={() => setMobileOpen(false)}>⚖️ Fiqh</Link>
-          <Link to="/prayer" className={`nav-link ${isActive('/prayer')}`} onClick={() => setMobileOpen(false)}>🕐 Prayer</Link>
-          <Link to="/weekly" className={`nav-link ${isActive('/weekly')}`} onClick={() => setMobileOpen(false)}>📚 Weekly</Link>
-          <Link to="/classes" className={`nav-link ${isActive('/classes')}`} onClick={() => setMobileOpen(false)}>🎓 Classes</Link>
-          <Link to="/kids/games" className={`nav-link ${isActive('/kids/games')}`} onClick={() => setMobileOpen(false)}>🎮 Kids</Link>
+          <Link to="/quran" className={`nav-link ${isActive('/quran')}`} onClick={() => setMobileOpen(false)}>📖 {t('Quran')}</Link>
+          <Link to="/hadith" className={`nav-link ${isActive('/hadith')}`} onClick={() => setMobileOpen(false)}>📚 {t('Hadith')}</Link>
+          <Link to="/fiqh" className={`nav-link ${isActive('/fiqh')}`} onClick={() => setMobileOpen(false)}>⚖️ {t('Fiqh')}</Link>
+          <Link to="/prayer" className={`nav-link ${isActive('/prayer')}`} onClick={() => setMobileOpen(false)}>🕐 {t('Prayer')}</Link>
+          <Link to="/weekly" className={`nav-link ${isActive('/weekly')}`} onClick={() => setMobileOpen(false)}>📚 {t('Weekly')}</Link>
+          <Link to="/classes" className={`nav-link ${isActive('/classes')}`} onClick={() => setMobileOpen(false)}>🎓 {t('Classes')}</Link>
+          <Link to="/kids/games" className={`nav-link ${isActive('/kids/games')}`} onClick={() => setMobileOpen(false)}>🎮 {t('Kids')}</Link>
 
           {user ? (
             <div className="nav-user">
-              {isAdmin && <Link to="/admin" className="btn btn-sm btn-accent" onClick={() => setMobileOpen(false)}>⚙️ Admin</Link>}
+              {isAdmin && <Link to="/admin" className="btn btn-sm btn-accent" onClick={() => setMobileOpen(false)}>⚙️ {t('Admin')}</Link>}
               <Link to="/kids" className="btn btn-sm btn-outline" onClick={() => setMobileOpen(false)}>👤 {user.name}</Link>
-              <button className="btn btn-sm btn-danger" onClick={() => { logout(); setMobileOpen(false); }}>Logout</button>
+              <button className="btn btn-sm btn-danger" onClick={() => { logout(); setMobileOpen(false); }}>{t('Logout')}</button>
             </div>
           ) : (
             <div className="nav-user">
-              <Link to="/login" className="btn btn-sm btn-outline" onClick={() => setMobileOpen(false)}>Login</Link>
-              <Link to="/register" className="btn btn-sm btn-primary" onClick={() => setMobileOpen(false)}>Sign Up</Link>
+              <Link to="/login" className="btn btn-sm btn-outline" onClick={() => setMobileOpen(false)}>{t('Login')}</Link>
+              <Link to="/register" className="btn btn-sm btn-primary" onClick={() => setMobileOpen(false)}>{t('Sign Up')}</Link>
             </div>
           )}
         </div>
+
+        <select className="lang-select" value={lang} onChange={e => setLang(e.target.value)} aria-label={t('Language')} title={t('Language')}>
+          {languages.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
+        </select>
 
         <button className="navbar-toggle" onClick={() => setMobileOpen(!mobileOpen)}>
           {mobileOpen ? '✕' : '☰'}
@@ -98,9 +104,14 @@ export default function Navbar() {
           display: flex;
           align-items: center;
           gap: 8px;
-          margin-left: 12px;
-          padding-left: 12px;
-          border-left: 1px solid var(--border);
+          margin-inline-start: 12px;
+          padding-inline-start: 12px;
+          border-inline-start: 1px solid var(--border);
+        }
+        .lang-select {
+          margin-inline-start: 8px; padding: 6px 8px; border-radius: var(--radius-md);
+          background: var(--surface); color: var(--text); border: 1px solid var(--border);
+          font-size: 0.85rem; cursor: pointer; max-width: 120px;
         }
         .navbar-toggle {
           display: none;
@@ -112,6 +123,7 @@ export default function Navbar() {
         }
         @media (max-width: 1024px) {
           .navbar-toggle { display: block; }
+          .lang-select { margin-inline-start: auto; margin-inline-end: 8px; }
           .navbar-links {
             display: none;
             position: absolute;
@@ -127,9 +139,9 @@ export default function Navbar() {
           .navbar-links.open { display: flex; }
           .nav-link { width: 100%; }
           .nav-user {
-            margin-left: 0;
-            padding-left: 0;
-            border-left: none;
+            margin-inline-start: 0;
+            padding-inline-start: 0;
+            border-inline-start: none;
             padding-top: 12px;
             border-top: 1px solid var(--border);
             width: 100%;

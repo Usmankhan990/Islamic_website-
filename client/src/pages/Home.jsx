@@ -1,23 +1,29 @@
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { getPrayerTimes, getUserLocation, getNextPrayer } from '../services/prayerApi';
+import { TRANSLATIONS } from '../services/quranApi';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export default function Home() {
   const [verse, setVerse] = useState(null);
   const [nextPrayer, setNextPrayer] = useState(null);
   const [countdown, setCountdown] = useState('');
+  const { t, lang } = useLanguage();
 
+  // Daily verse in the UI language (Arabic UI shows the Arabic text itself)
   useEffect(() => {
-    // Fetch random verse
     const surahNum = Math.floor(Math.random() * 114) + 1;
-    fetch(`https://api.alquran.cloud/v1/surah/${surahNum}/en.asad`)
+    const edition = lang === 'ar' ? 'quran-uthmani' : (TRANSLATIONS[lang]?.edition || 'en.sahih');
+    fetch(`https://api.alquran.cloud/v1/surah/${surahNum}/${edition}`)
       .then(r => r.json())
       .then(data => {
         const ayahs = data.data.ayahs;
         const randomAyah = ayahs[Math.floor(Math.random() * ayahs.length)];
-        setVerse({ text: randomAyah.text, surah: data.data.englishName, number: randomAyah.numberInSurah });
+        setVerse({ text: randomAyah.text, surah: lang === 'ar' || lang === 'ur' ? data.data.name : data.data.englishName, number: randomAyah.numberInSurah });
       }).catch(() => {});
+  }, [lang]);
 
+  useEffect(() => {
     // Fetch prayer times
     getUserLocation().then(({ lat, lng }) => {
       return getPrayerTimes(lat, lng);
@@ -33,24 +39,24 @@ export default function Home() {
     const interval = setInterval(() => {
       const now = new Date();
       const diff = nextPrayer.date - now;
-      if (diff <= 0) { setCountdown('Now!'); return; }
+      if (diff <= 0) { setCountdown(t('Now!')); return; }
       const h = Math.floor(diff / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
       const s = Math.floor((diff % 60000) / 1000);
       setCountdown(`${h}h ${m}m ${s}s`);
     }, 1000);
     return () => clearInterval(interval);
-  }, [nextPrayer]);
+  }, [nextPrayer, t]);
 
   const features = [
-    { icon: '📖', title: 'Quran', desc: 'Read the Holy Quran in 10+ languages with beautiful Arabic typography', link: '/quran', color: '#0D6B4B' },
-    { icon: '📚', title: 'Hadith', desc: 'Explore Sahih Bukhari, Muslim, and 4 more trusted collections', link: '/hadith', color: '#D4A843' },
-    { icon: '⚖️', title: 'Fiqh Library', desc: 'Study Islamic jurisprudence from the four major schools of thought', link: '/fiqh', color: '#3B82F6' },
-    { icon: '🕐', title: 'Prayer Times', desc: 'Accurate prayer times and Qibla direction based on your location', link: '/prayer', color: '#A855F7' },
-    { icon: '🎮', title: 'Kids Zone', desc: 'Fun games, quizzes, and competitions to help children learn Islam', link: '/kids/games', color: '#FF6B6B' },
-    { icon: '🎓', title: 'Live Classes', desc: 'Free Quran teaching sessions via Google Meet, Zoom, or Teams', link: '/classes', color: '#22C55E' },
-    { icon: '🏆', title: 'Competitions', desc: 'Join Quran recitation and Islamic quiz competitions — win prizes!', link: '/kids/competitions', color: '#F59E0B' },
-    { icon: '🤖', title: 'AI Prayer Guide', desc: 'Use your camera to get real-time feedback on your prayer posture positions', link: '/prayer/posture', color: '#EC4899' },
+    { icon: '📖', title: t('Quran'), desc: t('Read the Holy Quran in 10+ languages with beautiful Arabic typography'), link: '/quran', color: '#0D6B4B' },
+    { icon: '📚', title: t('Hadith'), desc: t('Explore Sahih Bukhari, Muslim, and 4 more trusted collections'), link: '/hadith', color: '#D4A843' },
+    { icon: '⚖️', title: t('Fiqh Library'), desc: t('Study Islamic jurisprudence from the four major schools of thought'), link: '/fiqh', color: '#3B82F6' },
+    { icon: '🕐', title: t('Prayer Times'), desc: t('Accurate prayer times and Qibla direction based on your location'), link: '/prayer', color: '#A855F7' },
+    { icon: '🎮', title: t('Kids Zone'), desc: t('Fun games, quizzes, and competitions to help children learn Islam'), link: '/kids/games', color: '#FF6B6B' },
+    { icon: '🎓', title: t('Live Classes'), desc: t('Free Quran teaching sessions via Google Meet, Zoom, or Teams'), link: '/classes', color: '#22C55E' },
+    { icon: '🏆', title: t('Competitions'), desc: t('Join Quran recitation and Islamic quiz competitions — win prizes!'), link: '/kids/competitions', color: '#F59E0B' },
+    { icon: '🤖', title: t('AI Prayer Guide'), desc: t('Use your camera to get real-time feedback on your prayer posture positions'), link: '/prayer/posture', color: '#EC4899' },
   ];
 
   return (
@@ -60,18 +66,17 @@ export default function Home() {
         <div className="hero-bg-pattern"></div>
         <div className="container hero-content">
           <div className="hero-text animate-slide-up">
-            <div className="hero-badge">🌙 Islamic Learning Platform</div>
+            <div className="hero-badge">🌙 {t('Islamic Learning Platform')}</div>
             <h1 className="heading-xl">
-              Learn Islam with<br/>
-              <span className="hero-gradient">Joy & Wisdom</span>
+              {t('Learn Islam with')}<br/>
+              <span className="hero-gradient">{t('Joy & Wisdom')}</span>
             </h1>
             <p className="hero-desc">
-              A comprehensive platform for Quran, Hadith, prayer times, live classes, 
-              and engaging games for children — all in one beautiful place.
+              {t('A comprehensive platform for Quran, Hadith, prayer times, live classes, and engaging games for children — all in one beautiful place.')}
             </p>
             <div className="hero-buttons">
-              <Link to="/register" className="btn btn-accent btn-lg">🚀 Get Started Free</Link>
-              <Link to="/quran" className="btn btn-outline btn-lg">📖 Read Quran</Link>
+              <Link to="/register" className="btn btn-accent btn-lg">🚀 {t('Get Started Free')}</Link>
+              <Link to="/quran" className="btn btn-outline btn-lg">📖 {t('Read Quran')}</Link>
             </div>
           </div>
 
@@ -79,8 +84,8 @@ export default function Home() {
             {/* Prayer Countdown */}
             {nextPrayer && (
               <div className="hero-prayer-card">
-                <div className="prayer-card-label">Next Prayer</div>
-                <div className="prayer-card-name">{nextPrayer.name}</div>
+                <div className="prayer-card-label">{t('Next Prayer')}</div>
+                <div className="prayer-card-name">{t(nextPrayer.name)}</div>
                 <div className="prayer-card-time">{nextPrayer.time}</div>
                 <div className="prayer-card-countdown animate-pulse">{countdown}</div>
               </div>
@@ -89,9 +94,9 @@ export default function Home() {
             {/* Daily Verse */}
             {verse && (
               <div className="hero-verse-card">
-                <div className="verse-card-label">📖 Daily Verse</div>
-                <p className="verse-text">"{verse.text}"</p>
-                <p className="verse-ref">— {verse.surah}, Verse {verse.number}</p>
+                <div className="verse-card-label">📖 {t('Daily Verse')}</div>
+                <p className={`verse-text ${lang === 'ar' ? 'arabic-text' : ''}`}>"{verse.text}"</p>
+                <p className="verse-ref">— {verse.surah}, {t('Verse {n}', { n: verse.number })}</p>
               </div>
             )}
           </div>
@@ -100,9 +105,9 @@ export default function Home() {
 
       {/* Features */}
       <section className="features container">
-        <h2 className="heading-lg text-center" style={{ marginBottom: 16 }}>Everything You Need</h2>
+        <h2 className="heading-lg text-center" style={{ marginBottom: 16 }}>{t('Everything You Need')}</h2>
         <p className="text-center text-muted" style={{ marginBottom: 48, maxWidth: 600, margin: '0 auto 48px' }}>
-          Explore the complete Islamic learning experience — for individuals, families, and children.
+          {t('Explore the complete Islamic learning experience — for individuals, families, and children.')}
         </p>
         <div className="features-grid">
           {features.map((f, i) => (
@@ -110,7 +115,7 @@ export default function Home() {
               <div className="feature-icon">{f.icon}</div>
               <h3 className="feature-title">{f.title}</h3>
               <p className="feature-desc">{f.desc}</p>
-              <span className="feature-arrow">→</span>
+              <span className="feature-arrow">{lang === 'ur' || lang === 'ar' ? '←' : '→'}</span>
             </Link>
           ))}
         </div>
@@ -118,16 +123,16 @@ export default function Home() {
 
       {/* Live Du'a of the Day */}
       <section className="duas-showcase container">
-        <h2 className="heading-lg text-center" style={{ marginBottom: 8 }}>🤲 Daily Du'as for Kids</h2>
-        <p className="text-center text-muted" style={{ marginBottom: 32 }}>Beautiful prayers for every moment of the day</p>
+        <h2 className="heading-lg text-center" style={{ marginBottom: 8 }}>🤲 {t("Daily Du'as for Kids")}</h2>
+        <p className="text-center text-muted" style={{ marginBottom: 32 }}>{t('Beautiful prayers for every moment of the day')}</p>
         <div className="duas-live-grid">
           {[
-            { emoji: '🌅', title: 'Waking Up', arabic: 'الْحَمْدُ لِلَّهِ الَّذِي أَحْيَانَا', color: '#FFB347' },
-            { emoji: '🌙', title: 'Before Sleep', arabic: 'بِاسْمِكَ اللَّهُمَّ أَمُوتُ وَأَحْيَا', color: '#7B68EE' },
-            { emoji: '🍽️', title: 'Before Eating', arabic: 'بِسْمِ اللَّهِ وَعَلَى بَرَكَةِ اللَّهِ', color: '#FF6B6B' },
-            { emoji: '📚', title: 'Before Studying', arabic: 'رَبِّ زِدْنِي عِلْماً', color: '#8B5CF6' },
-            { emoji: '🕌', title: 'Entering Masjid', arabic: 'اللَّهُمَّ افْتَحْ لِي أَبْوَابَ رَحْمَتِكَ', color: '#0D6B4B' },
-            { emoji: '👨‍👩‍👧‍👦', title: 'For Parents', arabic: 'رَبِّ ارْحَمْهُمَا كَمَا رَبَّيَانِي صَغِيرًا', color: '#EC4899' },
+            { emoji: '🌅', title: t('Waking Up'), arabic: 'الْحَمْدُ لِلَّهِ الَّذِي أَحْيَانَا', color: '#FFB347' },
+            { emoji: '🌙', title: t('Before Sleep'), arabic: 'بِاسْمِكَ اللَّهُمَّ أَمُوتُ وَأَحْيَا', color: '#7B68EE' },
+            { emoji: '🍽️', title: t('Before Eating'), arabic: 'بِسْمِ اللَّهِ وَعَلَى بَرَكَةِ اللَّهِ', color: '#FF6B6B' },
+            { emoji: '📚', title: t('Before Studying'), arabic: 'رَبِّ زِدْنِي عِلْماً', color: '#8B5CF6' },
+            { emoji: '🕌', title: t('Entering Masjid'), arabic: 'اللَّهُمَّ افْتَحْ لِي أَبْوَابَ رَحْمَتِكَ', color: '#0D6B4B' },
+            { emoji: '👨‍👩‍👧‍👦', title: t('For Parents'), arabic: 'رَبِّ ارْحَمْهُمَا كَمَا رَبَّيَانِي صَغِيرًا', color: '#EC4899' },
           ].map((d, i) => (
             <div key={i} className="dua-live-card" style={{ '--dc': d.color, animationDelay: `${i * 0.1}s` }}>
               <span className="dua-live-emoji">{d.emoji}</span>
@@ -137,20 +142,20 @@ export default function Home() {
           ))}
         </div>
         <div className="text-center" style={{ marginTop: 24 }}>
-          <Link to="/kids/duas" className="btn btn-accent btn-lg">🤲 See All Du'as & Learn</Link>
+          <Link to="/kids/duas" className="btn btn-accent btn-lg">🤲 {t("See All Du'as & Learn")}</Link>
         </div>
       </section>
 
       {/* CTA */}
       <section className="cta container">
         <div className="cta-card">
-          <h2 className="heading-lg">Ready to Start Your Islamic Journey?</h2>
+          <h2 className="heading-lg">{t('Ready to Start Your Islamic Journey?')}</h2>
           <p className="text-muted" style={{ marginTop: 12, marginBottom: 24, maxWidth: 500 }}>
-            Join thousands of learners worldwide. Sign up for free and access Quran, Hadith, games, and live classes.
+            {t('Join thousands of learners worldwide. Sign up for free and access Quran, Hadith, games, and live classes.')}
           </p>
           <div className="flex gap-md" style={{ justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link to="/register" className="btn btn-primary btn-lg">📝 Create Free Account</Link>
-            <Link to="/reviews" className="btn btn-outline btn-lg">⭐ Read Reviews</Link>
+            <Link to="/register" className="btn btn-primary btn-lg">📝 {t('Create Free Account')}</Link>
+            <Link to="/reviews" className="btn btn-outline btn-lg">⭐ {t('Read Reviews')}</Link>
           </div>
         </div>
       </section>
@@ -271,7 +276,7 @@ export default function Home() {
         .feature-arrow {
           position: absolute;
           bottom: 20px;
-          right: 20px;
+          inset-inline-end: 20px;
           font-size: 1.2rem;
           color: var(--text-dim);
           transition: var(--transition);

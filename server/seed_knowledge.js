@@ -1,7 +1,6 @@
-const mysql = require('mysql2/promise');
+const db = require('./config/db');
 
 async function seed() {
-  const db = await mysql.createConnection({ host: 'localhost', user: 'root', database: 'islamic_platform' });
 
   const entries = [
     ['hadith', 'The Prophet (ﷺ) said: "The best among you is the one who learns the Quran and teaches it." (Sahih al-Bukhari 5027)', 'Sahih al-Bukhari', 'quran learn teach best'],
@@ -37,7 +36,7 @@ async function seed() {
   }
 
   console.log(`Seeded ${entries.length} knowledge base entries`);
-  await db.end();
+  await db.pool.end();
 }
 
 seed().catch(console.error);

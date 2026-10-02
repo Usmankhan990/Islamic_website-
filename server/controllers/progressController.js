@@ -24,8 +24,8 @@ const progressController = {
       await db.query(
         `INSERT INTO progress (user_id, surah_number, surah_name, verses_memorized, total_verses, completion_pct) 
          VALUES (?,?,?,?,?,?) 
-         ON DUPLICATE KEY UPDATE verses_memorized=?, completion_pct=?`,
-        [userId, surah_number, surah_name, verses_memorized, total_verses, completion_pct, verses_memorized, completion_pct]
+         ON CONFLICT (user_id, surah_number) DO UPDATE SET verses_memorized=EXCLUDED.verses_memorized, completion_pct=EXCLUDED.completion_pct`,
+        [userId, surah_number, surah_name, verses_memorized, total_verses, completion_pct]
       );
 
       // Check for completion achievement
@@ -81,7 +81,7 @@ const progressController = {
          FROM users u LEFT JOIN game_results gr ON u.id = gr.user_id
          WHERE u.role IN ('child', 'parent')
          GROUP BY u.id, u.name, u.avatar
-         HAVING total_score > 0
+         HAVING COALESCE(SUM(gr.score), 0) > 0
          ORDER BY total_score DESC LIMIT 50`
       );
       res.json({ leaderboard });

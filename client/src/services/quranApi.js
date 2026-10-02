@@ -1,7 +1,7 @@
 const QURAN_API = 'https://api.alquran.cloud/v1';
 
 const TRANSLATIONS = {
-  en: { name: 'English', edition: 'en.asad' },
+  en: { name: 'English', edition: 'en.sahih' },  // Sahih International — matches the human audio below
   ur: { name: 'اردو (Urdu)', edition: 'ur.jalandhry' },
   fr: { name: 'Français', edition: 'fr.hamidullah' },
   tr: { name: 'Türkçe', edition: 'tr.diyanet' },
@@ -28,6 +28,21 @@ const AUDIO_EDITIONS = {
   ur: { name: 'Urdu', edition: 'ur.khan' },
 };
 
+// Real human recordings of the translation, verse by verse (everyayah.com).
+// Each matches the text edition in TRANSLATIONS for that language.
+const HUMAN_TRANSLATION_AUDIO = {
+  ur: { name: 'Shamshad Ali Khan', folder: 'translations/urdu_shamshad_ali_khan_46kbps' }, // Jalandhry
+  en: { name: 'Ibrahim Walk', folder: 'English/Sahih_Intnl_Ibrahim_Walk_192kbps' },      // Sahih International
+};
+
+const pad3 = (n) => String(n).padStart(3, '0');
+
+export function getHumanTranslationAudio(lang, surahNumber, ayahNumber) {
+  const source = HUMAN_TRANSLATION_AUDIO[lang];
+  if (!source) return null;
+  return `https://everyayah.com/data/${source.folder}/${pad3(surahNumber)}${pad3(ayahNumber)}.mp3`;
+}
+
 export async function getSurahs() {
   const res = await fetch(`${QURAN_API}/surah`);
   const data = await res.json();
@@ -41,7 +56,7 @@ export async function getSurah(number, edition = 'quran-uthmani') {
 }
 
 export async function getSurahWithTranslation(number, lang = 'en') {
-  const edition = TRANSLATIONS[lang]?.edition || 'en.asad';
+  const edition = TRANSLATIONS[lang]?.edition || 'en.sahih';
   const [arabic, translation] = await Promise.all([
     fetch(`${QURAN_API}/surah/${number}/quran-uthmani`).then(r => r.json()),
     fetch(`${QURAN_API}/surah/${number}/${edition}`).then(r => r.json())
@@ -62,4 +77,4 @@ export async function getSurahWithAudio(number, reciter = 'ar.alafasy') {
   return data.data; // Each ayah has .audio property
 }
 
-export { TRANSLATIONS, RECITERS, AUDIO_EDITIONS };
+export { TRANSLATIONS, RECITERS, AUDIO_EDITIONS, HUMAN_TRANSLATION_AUDIO };

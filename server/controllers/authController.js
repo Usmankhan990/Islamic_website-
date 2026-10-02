@@ -82,7 +82,7 @@ const authController = {
         token,
         user: {
           id: user.id, name: user.name, email: user.email,
-          role: user.role, avatar: user.avatar
+          role: user.role, avatar: user.avatar, coins: user.coins
         }
       });
     } catch (error) {
@@ -95,7 +95,7 @@ const authController = {
   async getMe(req, res) {
     try {
       const [users] = await db.query(
-        'SELECT id, name, email, role, avatar, parent_id, phone, city, country, address, created_at FROM users WHERE id = ?',
+        'SELECT id, name, email, role, avatar, parent_id, phone, city, country, address, coins, created_at FROM users WHERE id = ?',
         [req.user.id]
       );
       if (users.length === 0) {

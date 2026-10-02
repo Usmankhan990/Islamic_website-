@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 export default function KidsLeaderboard() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { t } = useLanguage();
 
   useEffect(() => {
     api.get('/progress/leaderboard').then(r => { setLeaderboard(r.data.leaderboard); setLoading(false); })
@@ -16,15 +18,16 @@ export default function KidsLeaderboard() {
     <div className="page container">
       <div className="text-center animate-slide-up" style={{ marginBottom: 48 }}>
         <h1 style={{ fontFamily: 'var(--font-kids)', fontSize: 'clamp(2rem,5vw,3rem)', fontWeight: 800 }}>
-          🏆 Leaderboard
+          🏆 {t('Leaderboard')}
         </h1>
-        <p className="text-muted" style={{ fontFamily: 'var(--font-kids)' }}>Top learners on NoorAcademy!</p>
+        <p className="text-muted" style={{ fontFamily: 'var(--font-kids)' }}>{t('Top learners on NoorAcademy!')}</p>
       </div>
 
       {loading ? <div className="loader"><div className="spinner"></div></div> : (
         <div className="leaderboard-wrapper" style={{ maxWidth: 700, margin: '0 auto' }}>
           {/* Top 3 */}
-          {leaderboard.length >= 3 && (
+          {/* Podium shows however many of the top 3 exist */}
+          {leaderboard.length > 0 && (
             <div className="top-three">
               {[1, 0, 2].map(idx => {
                 const u = leaderboard[idx];
@@ -34,7 +37,7 @@ export default function KidsLeaderboard() {
                     <span className="top-medal">{medals[idx]}</span>
                     <div className="top-avatar">{u.name?.charAt(0)}</div>
                     <div className="top-name">{u.name}</div>
-                    <div className="top-score">{u.total_score} pts</div>
+                    <div className="top-score">{t('{n} pts', { n: u.total_score })}</div>
                     <div className="top-badges">{u.badge_count} 🏆</div>
                   </div>
                 );
@@ -49,9 +52,9 @@ export default function KidsLeaderboard() {
                 <span className="lb-rank">#{i + 4}</span>
                 <div className="lb-avatar">{u.name?.charAt(0)}</div>
                 <span className="lb-name">{u.name}</span>
-                <span className="lb-games">{u.games_played} games</span>
+                <span className="lb-games">{t('{n} games', { n: u.games_played })}</span>
                 <span className="lb-badges">{u.badge_count} 🏆</span>
-                <span className="lb-score">{u.total_score} pts</span>
+                <span className="lb-score">{t('{n} pts', { n: u.total_score })}</span>
               </div>
             ))}
           </div>
@@ -60,7 +63,7 @@ export default function KidsLeaderboard() {
             <div className="text-center" style={{ padding: 60 }}>
               <span style={{ fontSize: '4rem' }}>🏆</span>
               <p className="text-muted" style={{ marginTop: 16, fontFamily: 'var(--font-kids)' }}>
-                No scores yet! Be the first to play and rank!
+                {t('No scores yet! Be the first to play and rank!')}
               </p>
             </div>
           )}

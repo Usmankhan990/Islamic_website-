@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 export default function KidsDashboard() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -22,33 +24,38 @@ export default function KidsDashboard() {
       {/* Welcome Banner */}
       <div className="kids-welcome animate-slide-up">
         <div className="kids-welcome-content">
-          <h1 className="kids-heading">🌟 Welcome, {user?.name}!</h1>
-          <p className="kids-subtitle">Keep learning and earning badges! You're doing amazing! 🎉</p>
+          <h1 className="kids-heading">🌟 {t('Welcome, {name}!', { name: user?.name })}</h1>
+          <p className="kids-subtitle">{t("Keep learning and earning badges! You're doing amazing!")} 🎉</p>
         </div>
         <div className="kids-welcome-mascot animate-float">🧒</div>
       </div>
 
       {/* Stats */}
       <div className="kids-stats-row">
+        <div className="kids-stat-card" style={{ '--stat-color': '#FBBF24' }}>
+          <span className="kids-stat-icon">🪙</span>
+          <span className="kids-stat-value">{data?.coins || 0}</span>
+          <span className="kids-stat-label">{t('Coins')}</span>
+        </div>
         <div className="kids-stat-card" style={{ '--stat-color': '#FF6B6B' }}>
           <span className="kids-stat-icon">🎮</span>
           <span className="kids-stat-value">{data?.stats?.games_played || 0}</span>
-          <span className="kids-stat-label">Games Played</span>
+          <span className="kids-stat-label">{t('Games Played')}</span>
         </div>
         <div className="kids-stat-card" style={{ '--stat-color': '#4ECDC4' }}>
           <span className="kids-stat-icon">⭐</span>
           <span className="kids-stat-value">{data?.stats?.total_score || 0}</span>
-          <span className="kids-stat-label">Total Score</span>
+          <span className="kids-stat-label">{t('Total Score')}</span>
         </div>
         <div className="kids-stat-card" style={{ '--stat-color': '#A855F7' }}>
           <span className="kids-stat-icon">🏆</span>
           <span className="kids-stat-value">{data?.achievements?.length || 0}</span>
-          <span className="kids-stat-label">Badges</span>
+          <span className="kids-stat-label">{t('Badges')}</span>
         </div>
         <div className="kids-stat-card" style={{ '--stat-color': '#FBBF24' }}>
           <span className="kids-stat-icon">🎁</span>
           <span className="kids-stat-value">{data?.prizes?.length || 0}</span>
-          <span className="kids-stat-label">Prizes</span>
+          <span className="kids-stat-label">{t('Prizes')}</span>
         </div>
       </div>
 
@@ -56,30 +63,30 @@ export default function KidsDashboard() {
       <div className="kids-quick-links">
         <Link to="/kids/games" className="kids-quick-card" style={{ background: 'linear-gradient(135deg, #FF6B6B, #FF8E8E)' }}>
           <span style={{ fontSize: '2rem' }}>🎮</span>
-          <span>Play Games</span>
+          <span>{t('Play Games')}</span>
         </Link>
         <Link to="/kids/competitions" className="kids-quick-card" style={{ background: 'linear-gradient(135deg, #4ECDC4, #45B7AA)' }}>
           <span style={{ fontSize: '2rem' }}>🏅</span>
-          <span>Competitions</span>
+          <span>{t('Competitions')}</span>
         </Link>
         <Link to="/kids/duas" className="kids-quick-card" style={{ background: 'linear-gradient(135deg, #FFB347, #FF8E53)' }}>
           <span style={{ fontSize: '2rem' }}>🤲</span>
-          <span>Daily Du'as</span>
+          <span>{t("Daily Du'as")}</span>
         </Link>
         <Link to="/kids/leaderboard" className="kids-quick-card" style={{ background: 'linear-gradient(135deg, #A855F7, #8B5CF6)' }}>
           <span style={{ fontSize: '2rem' }}>🏆</span>
-          <span>Leaderboard</span>
+          <span>{t('Leaderboard')}</span>
         </Link>
         <Link to="/quran" className="kids-quick-card" style={{ background: 'linear-gradient(135deg, #FBBF24, #F59E0B)' }}>
           <span style={{ fontSize: '2rem' }}>📖</span>
-          <span>Read Quran</span>
+          <span>{t('Read Quran')}</span>
         </Link>
       </div>
 
       {/* Achievements */}
       {data?.achievements?.length > 0 && (
         <div className="kids-section">
-          <h2 className="kids-section-title">🏆 My Achievements</h2>
+          <h2 className="kids-section-title">🏆 {t('My Achievements')}</h2>
           <div className="kids-badges-grid">
             {data.achievements.map((a, i) => (
               <div key={i} className="kids-badge-card animate-slide-up" style={{ animationDelay: `${i * 0.1}s` }}>
@@ -92,10 +99,30 @@ export default function KidsDashboard() {
         </div>
       )}
 
+      {/* Coin history */}
+      {data?.coinHistory?.length > 0 && (
+        <div className="kids-section">
+          <h2 className="kids-section-title">🪙 {t('My Coins')}</h2>
+          <div className="kids-results-list">
+            {data.coinHistory.map((c, i) => (
+              <div key={i} className="kids-result-card">
+                <div className="kids-result-game">{(() => {
+                  // Server stores "Won <game> — Level <n>"; show it in the UI language
+                  const m = /^Won (.+) — Level (\d+)$/.exec(c.reason || '');
+                  return m ? t('Won {game} — Level {n}', { game: m[1], n: m[2] }) : c.reason;
+                })()}</div>
+                <div className="kids-result-score" style={{ color: '#FBBF24' }}>+{c.amount} 🪙</div>
+                <div className="kids-result-date">{new Date(c.created_at).toLocaleDateString()}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Recent Games */}
       {data?.gameResults?.length > 0 && (
         <div className="kids-section">
-          <h2 className="kids-section-title">🎮 Recent Games</h2>
+          <h2 className="kids-section-title">🎮 {t('Recent Games')}</h2>
           <div className="kids-results-list">
             {data.gameResults.map((r, i) => (
               <div key={i} className="kids-result-card">
@@ -111,14 +138,14 @@ export default function KidsDashboard() {
       {/* Prizes */}
       {data?.prizes?.length > 0 && (
         <div className="kids-section">
-          <h2 className="kids-section-title">🎁 My Prizes</h2>
+          <h2 className="kids-section-title">🎁 {t('My Prizes')}</h2>
           <div className="grid-2 gap-md">
             {data.prizes.map((p, i) => (
               <div key={i} className="card" style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)' }}>
                 <h4 style={{ color: '#FBBF24' }}>🎁 {p.prize_name}</h4>
                 <p className="text-sm text-muted" style={{ marginTop: 4 }}>{p.prize_description}</p>
                 <span className={`badge ${p.shipping_status === 'delivered' ? 'badge-success' : p.shipping_status === 'shipped' ? 'badge-info' : 'badge-warning'}`} style={{ marginTop: 8 }}>
-                  {p.shipping_status}
+                  {t(p.shipping_status)}
                 </span>
               </div>
             ))}
@@ -143,7 +170,7 @@ export default function KidsDashboard() {
         .kids-heading { font-family: var(--font-kids); font-size: 2rem; font-weight: 800; }
         .kids-subtitle { font-family: var(--font-kids); font-size: 1.1rem; opacity: 0.9; margin-top: 8px; }
         .kids-welcome-mascot { font-size: 4rem; }
-        .kids-stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+        .kids-stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 32px; }
         .kids-stat-card {
           background: var(--surface);
           border: 2px solid var(--border);

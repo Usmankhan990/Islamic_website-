@@ -31,7 +31,11 @@ app.use(cors({
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // limit each IP
+  // Per IP. Kids in one school/home share an IP and games make several requests per level,
+  // so keep this generous; override with RATE_LIMIT_MAX in .env
+  max: Number(process.env.RATE_LIMIT_MAX) || 1000,
+  // Quran translation audio makes one TTS request per verse; don't let it lock users out of login/data
+  skip: (req) => req.path.startsWith('/tts'),
   message: { message: 'Too many requests, please try again later.' }
 });
 app.use('/api/', limiter);

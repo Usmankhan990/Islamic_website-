@@ -1,30 +1,51 @@
-const mysql = require('mysql2');
+const { Pool, types } = require('pg');
 require('dotenv').config();
 
-const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'islamic_platform',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  enableKeepAlive: true,
-  keepAliveInitialDelay: 0
+// Return COUNT/SUM (bigint) and DECIMAL as JS numbers instead of strings
+types.setTypeParser(20, (v) => parseInt(v, 10));   // INT8
+types.setTypeParser(1700, (v) => parseFloat(v));   // NUMERIC
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
+  max: 10
 });
 
-const promisePool = pool.promise();
+// Convert MySQL-style `?` placeholders to Postgres `$1, $2, ...` (skips quoted strings)
+function toPgPlaceholders(sql) {
+  let out = '';
+  let n = 0;
+  let inQuote = false;
+  for (const ch of sql) {
+    if (ch === "'") inQuote = !inQuote;
+    out += (ch === '?' && !inQuote) ? `$${++n}` : ch;
+  }
+  return out;
+}
+
+// mysql2-compatible query(): resolves to [rows] for SELECT,
+// and [{ insertId, affectedRows }] for INSERT/UPDATE/DELETE
+async function query(sql, params = []) {
+  let text = toPgPlaceholders(sql);
+  const isInsert = /^\s*INSERT\b/i.test(text);
+  if (isInsert && !/\bRETURNING\b/i.test(text)) text += ' RETURNING id';
+
+  const result = await pool.query(text, params);
+
+  if (result.command === 'SELECT') return [result.rows];
+  return [{
+    insertId: isInsert && result.rows[0] ? result.rows[0].id : undefined,
+    affectedRows: result.rowCount,
+    rows: result.rows
+  }];
+}
 
 // Test connection
-pool.getConnection((err, connection) => {
-  if (err) {
-    console.error('❌ MySQL Connection Error:', err.message);
-    console.log('💡 Make sure MySQL is running and the database exists.');
-    console.log('💡 Run: mysql -u root < database/schema.sql');
-  } else {
-    console.log('✅ MySQL Connected Successfully');
-    connection.release();
-  }
-});
+pool.query('SELECT 1')
+  .then(() => console.log('✅ PostgreSQL (Supabase) Connected Successfully'))
+  .catch((err) => {
+    console.error('❌ PostgreSQL Connection Error:', err.message);
+    console.log('💡 Check DATABASE_URL in server/.env');
+  });
 
-module.exports = promisePool;
+module.exports = { query, execute: query, pool };

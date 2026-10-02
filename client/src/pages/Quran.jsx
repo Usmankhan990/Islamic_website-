@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { getSurahs, getSurahWithTranslation, getSurahWithAudio, TRANSLATIONS, RECITERS } from '../services/quranApi';
+import { getSurahs, getSurahWithTranslation, getSurahWithAudio, getHumanTranslationAudio, TRANSLATIONS, RECITERS, HUMAN_TRANSLATION_AUDIO } from '../services/quranApi';
 import { API_BASE } from '../services/api';
+
+// Bump when server-side pronunciation changes so browsers don't replay cached old audio
+const TTS_VERSION = 3;
 
 export default function Quran() {
   const [surahs, setSurahs] = useState([]);
@@ -16,7 +19,13 @@ export default function Quran() {
   const [isPlayingAll, setIsPlayingAll] = useState(false);
   const [withTranslation, setWithTranslation] = useState(false);
   const [speakingTranslation, setSpeakingTranslation] = useState(null);
+  const [voiceGender, setVoiceGender] = useState(() => {
+    // 'human' = real recorded translation (where available), 'male'/'female' = AI voice
+    try { return localStorage.getItem('quranTranslationVoice') || 'human'; } catch { return 'human'; }
+  });
+  const voiceGenderRef = useRef(voiceGender);
   const audioRef = useRef(null);
+  const ttsAudioRef = useRef(null);
   const isPlayingAllRef = useRef(false);
   const withTranslationRef = useRef(false);
   const verseRefs = useRef({});
@@ -54,6 +63,30 @@ export default function Quran() {
     }
   }, [reciter]);
 
+  // Keep the ref in sync so toggling "With Translation Audio" applies immediately, even mid-playback
+  useEffect(() => {
+    withTranslationRef.current = withTranslation;
+  }, [withTranslation]);
+
+  // Same for the translation voice; also remember the choice
+  useEffect(() => {
+    voiceGenderRef.current = voiceGender;
+    try { localStorage.setItem('quranTranslationVoice', voiceGender); } catch { /* storage unavailable */ }
+  }, [voiceGender]);
+
+  // Stop all audio when leaving the page so nothing keeps playing in the background
+  useEffect(() => () => {
+    isPlayingAllRef.current = false;
+    [audioRef, ttsAudioRef].forEach(ref => {
+      if (ref.current) {
+        ref.current.onended = null;
+        ref.current.onerror = null;
+        ref.current.pause();
+        ref.current = null;
+      }
+    });
+  }, []);
+
   const scrollToVerse = (index) => {
     const el = verseRefs.current[index];
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -75,20 +108,11 @@ export default function Quran() {
 
     audio.play().catch(() => {});
 
-    audio.onended = () => {
-      // If withTranslation mode, speak translation before moving to next
-      if (withTranslationRef.current && data?.translation?.ayahs?.[index]?.text) {
-        speakText(data.translation.ayahs[index].text, lang, () => {
-          if (isPlayingAllRef.current && index + 1 < audioData.ayahs.length) {
-            setTimeout(() => playVerse(index + 1), 300);
-          } else {
-            setPlayingVerse(null);
-            setIsPlayingAll(false);
-            isPlayingAllRef.current = false;
-          }
-        });
-      } else if (isPlayingAllRef.current && index + 1 < audioData.ayahs.length) {
-        setTimeout(() => playVerse(index + 1), 300);
+    // Continue to the next verse in Play All mode, otherwise finish
+    const next = () => {
+      if (isPlayingAllRef.current && index + 1 < audioData.ayahs.length) {
+        // Re-check at fire time so Stop during the gap really stops
+        setTimeout(() => { if (isPlayingAllRef.current) playVerse(index + 1); }, 300);
       } else {
         setPlayingVerse(null);
         setIsPlayingAll(false);
@@ -96,84 +120,94 @@ export default function Quran() {
       }
     };
 
-    audio.onerror = () => {
-      setPlayingVerse(null);
-      if (isPlayingAllRef.current && index + 1 < audioData.ayahs.length) {
-        setTimeout(() => playVerse(index + 1), 300);
+    audio.onended = () => {
+      // If withTranslation mode, speak translation before moving to next
+      if (withTranslationRef.current && data?.translation?.ayahs?.[index]?.text) {
+        playTranslation(index, next);
       } else {
-        setIsPlayingAll(false);
-        isPlayingAllRef.current = false;
+        next();
       }
     };
+
+    audio.onerror = next;
   }, [audioData, data, lang]);
 
-  // Play translation audio using backend TTS proxy (high-quality Google TTS)
-  const ttsAudioRef = useRef(null);
-  
-  const speakText = (text, language, onDone) => {
+  // Play the translation of one verse: real human recording when available
+  // (falls back to AI voice if it fails), otherwise AI neural voice via backend TTS
+  const playTranslation = (index, onDone) => {
+    const text = data?.translation?.ayahs?.[index]?.text;
+    if (!text) { if (onDone) onDone(); return; }
+
     // Stop any existing translation audio
     if (ttsAudioRef.current) {
+      ttsAudioRef.current.onended = null;
+      ttsAudioRef.current.onerror = null;
       ttsAudioRef.current.pause();
       ttsAudioRef.current = null;
     }
 
-    const ttsLang = language === 'ur' ? 'ur' : language === 'fr' ? 'fr' : 
-                    language === 'tr' ? 'tr' : language === 'de' ? 'de' : 
-                    language === 'es' ? 'es' : language === 'ru' ? 'ru' : 'en';
-    
-    const url = `${API_BASE}/tts?text=${encodeURIComponent(text)}&lang=${ttsLang}&speed=slow`;
-    const audio = new Audio(url);
-    ttsAudioRef.current = audio;
-    
-    setSpeakingTranslation(text.slice(0, 20));
-    
-    audio.onended = () => {
+    const choice = voiceGenderRef.current;
+    const ttsLang = ['ur', 'fr', 'tr', 'de', 'es', 'ru'].includes(lang) ? lang : 'en';
+    const ttsGender = choice === 'female' ? 'female' : 'male';
+    // v= busts browser cache of audio generated before pronunciation fixes
+    const ttsUrl = `${API_BASE}/tts?text=${encodeURIComponent(text)}&lang=${ttsLang}&speed=slow&gender=${ttsGender}&v=${TTS_VERSION}`;
+    const humanUrl = choice === 'human'
+      ? getHumanTranslationAudio(lang, data.arabic.number, data.arabic.ayahs[index].numberInSurah)
+      : null;
+
+    setSpeakingTranslation(index);
+
+    const finish = () => {
       setSpeakingTranslation(null);
       ttsAudioRef.current = null;
       if (onDone) onDone();
     };
-    audio.onerror = () => {
-      setSpeakingTranslation(null);
-      ttsAudioRef.current = null;
-      if (onDone) onDone();
+
+    const start = (url, fallbackUrl) => {
+      const audio = new Audio(url);
+      ttsAudioRef.current = audio;
+      const fail = () => {
+        if (ttsAudioRef.current !== audio) return; // already stopped/replaced
+        if (fallbackUrl) start(fallbackUrl, null); else finish();
+      };
+      audio.onended = finish;
+      audio.onerror = fail;
+      audio.play().catch(fail);
     };
-    audio.play().catch(() => {
-      setSpeakingTranslation(null);
-      ttsAudioRef.current = null;
-      if (onDone) onDone();
-    });
+
+    start(humanUrl || ttsUrl, humanUrl ? ttsUrl : null);
   };
 
   const speakVerseTranslation = (verseIndex) => {
-    const text = data?.translation?.ayahs?.[verseIndex]?.text;
-    if (!text) return;
-    speakText(text, lang);
+    // Clicking the active translation button again stops it
+    if (speakingTranslation === verseIndex) { stopPlaying(); return; }
+    stopPlaying();
+    playTranslation(verseIndex);
   };
 
   const playAll = () => {
     if (!audioData?.ayahs?.length) return;
     isPlayingAllRef.current = true;
-    withTranslationRef.current = withTranslation;
     setIsPlayingAll(true);
     playVerse(0);
   };
 
   const stopPlaying = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.onended = null;
-      audioRef.current = null;
-    }
-    if (ttsAudioRef.current) {
-      ttsAudioRef.current.pause();
-      ttsAudioRef.current = null;
-    }
+    isPlayingAllRef.current = false;
+    [audioRef, ttsAudioRef].forEach(ref => {
+      if (ref.current) {
+        ref.current.onended = null;
+        ref.current.onerror = null;
+        ref.current.pause();
+        ref.current = null;
+      }
+    });
     setPlayingVerse(null);
     setIsPlayingAll(false);
-    isPlayingAllRef.current = false;
-    withTranslationRef.current = false;
     setSpeakingTranslation(null);
   };
+
+  const isAnythingPlaying = isPlayingAll || playingVerse !== null || speakingTranslation !== null;
 
   const filtered = surahs.filter(s =>
     s.englishName.toLowerCase().includes(search.toLowerCase()) ||
@@ -238,7 +272,7 @@ export default function Quran() {
                   <select className="form-select quran-reciter-select" value={reciter} onChange={e => setReciter(e.target.value)}>
                     {Object.entries(RECITERS).map(([k, v]) => <option key={k} value={k}>🎙️ {v}</option>)}
                   </select>
-                  {!isPlayingAll ? (
+                  {!isAnythingPlaying ? (
                     <button className="quran-play-all-btn" onClick={playAll}>
                       <span className="play-icon">▶</span> Play All
                     </button>
@@ -250,13 +284,22 @@ export default function Quran() {
                   {playingVerse !== null && (
                     <span className="quran-now-playing">
                       🔊 Verse {playingVerse + 1}/{data.arabic.numberOfAyahs}
-                      {speakingTranslation && ' 🗣️ Translation'}
+                      {speakingTranslation !== null && ' 🗣️ Translation'}
                     </span>
                   )}
                   <label className="quran-trans-toggle">
                     <input type="checkbox" checked={withTranslation} onChange={e => setWithTranslation(e.target.checked)} />
                     <span>🗣️ With Translation Audio</span>
                   </label>
+                  <select className="form-select quran-voice-select"
+                    value={voiceGender === 'human' && !HUMAN_TRANSLATION_AUDIO[lang] ? 'male' : voiceGender}
+                    onChange={e => setVoiceGender(e.target.value)} title="Translation voice">
+                    {HUMAN_TRANSLATION_AUDIO[lang] && (
+                      <option value="human">🎙️ Real voice ({HUMAN_TRANSLATION_AUDIO[lang].name})</option>
+                    )}
+                    <option value="male">👨 AI Male voice</option>
+                    <option value="female">👩 AI Female voice</option>
+                  </select>
                 </div>
               </div>
 
@@ -287,7 +330,7 @@ export default function Quran() {
                         </span>
                       ) : '▶'}
                     </button>
-                    <button className={`verse-trans-btn ${speakingTranslation === data.translation.ayahs[i]?.text?.slice(0,20) ? 'active' : ''}`}
+                    <button className={`verse-trans-btn ${speakingTranslation === i ? 'active' : ''}`}
                       onClick={() => speakVerseTranslation(i)}
                       title="Play translation audio">
                       🗣️
@@ -329,6 +372,7 @@ export default function Quran() {
           border: 1px solid var(--border); border-radius: var(--radius-full); flex-wrap: wrap;
         }
         .quran-reciter-select { max-width: 240px; font-size: 0.85rem; border-radius: var(--radius-full); }
+        .quran-voice-select { max-width: 260px; font-size: 0.85rem; border-radius: var(--radius-full); padding: 6px 14px; }
         .quran-play-all-btn {
           display: flex; align-items: center; gap: 8px; padding: 10px 24px;
           background: linear-gradient(135deg, var(--primary), #15a168); color: white;

@@ -5,11 +5,11 @@ const userController = {
   async getAll(req, res) {
     try {
       const { role, search } = req.query;
-      let query = 'SELECT id, name, email, role, avatar, city, country, is_active, created_at FROM users WHERE 1=1';
+      let query = 'SELECT id, name, email, role, avatar, city, country, is_active, coins, subscription_type, subscription_expires, premium_requested_at, created_at FROM users WHERE 1=1';
       const params = [];
 
       if (role) { query += ' AND role = ?'; params.push(role); }
-      if (search) { query += ' AND (name LIKE ? OR email LIKE ?)'; params.push(`%${search}%`, `%${search}%`); }
+      if (search) { query += ' AND (name ILIKE ? OR email ILIKE ?)'; params.push(`%${search}%`, `%${search}%`); }
       query += ' ORDER BY created_at DESC';
 
       const [users] = await db.query(query, params);
@@ -24,7 +24,7 @@ const userController = {
   async getById(req, res) {
     try {
       const [users] = await db.query(
-        'SELECT id, name, email, role, avatar, parent_id, phone, city, country, address, created_at FROM users WHERE id = ?',
+        'SELECT id, name, email, role, avatar, parent_id, phone, city, country, address, coins, created_at FROM users WHERE id = ?',
         [req.params.id]
       );
       if (users.length === 0) return res.status(404).json({ message: 'User not found.' });
@@ -114,6 +114,13 @@ const userController = {
         [userId]
       );
 
+      // Coins balance + recent coin history
+      const [coinRows] = await db.query('SELECT coins FROM users WHERE id = ?', [userId]);
+      const [coinHistory] = await db.query(
+        'SELECT amount, reason, created_at FROM coin_transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT 10',
+        [userId]
+      );
+
       res.json({
         progress,
         achievements,
@@ -121,7 +128,9 @@ const userController = {
         gameResults,
         competitionResults,
         prizes,
-        stats: gameStats[0]
+        stats: gameStats[0],
+        coins: coinRows[0]?.coins || 0,
+        coinHistory
       });
     } catch (error) {
       console.error('Dashboard error:', error);

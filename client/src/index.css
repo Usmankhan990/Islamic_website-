@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Baloo+2:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Baloo+2:wght@400;500;600;700;800&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;600;700&family=Noto+Sans+Malayalam:wght@400;600;700&display=swap');
 
 /* ============================================
    CSS CUSTOM PROPERTIES / DESIGN TOKENS
@@ -726,3 +726,17 @@ h1, h2, h3, h4, h5, h6 {
 @media (max-width: 480px) {
   html { font-size: 14px; }
 }
+
+/* ============================================
+   LOCALIZATION: per-language fonts + right-to-left layout
+   ============================================ */
+html[lang="ur"], html[lang="ar"] {
+  --font-body: 'Noto Naskh Arabic', 'Inter', sans-serif;
+  --font-heading: 'Noto Naskh Arabic', 'Outfit', sans-serif;
+  --font-kids: 'Noto Naskh Arabic', 'Baloo 2', sans-serif;
+}
+html[lang="ur"] body, html[lang="ar"] body { line-height: 1.9; }
+html[lang="bn"] { --font-body: 'Noto Sans Bengali', 'Inter', sans-serif; --font-heading: 'Noto Sans Bengali', 'Outfit', sans-serif; --font-kids: 'Noto Sans Bengali', 'Baloo 2', sans-serif; }
+html[lang="ml"] { --font-body: 'Noto Sans Malayalam', 'Inter', sans-serif; --font-heading: 'Noto Sans Malayalam', 'Outfit', sans-serif; --font-kids: 'Noto Sans Malayalam', 'Baloo 2', sans-serif; }
+/* Right-to-left: text aligns right; Latin-only fields (email, numbers) stay left-to-right */
+[dir="rtl"] input[type="email"], [dir="rtl"] input[type="number"], [dir="rtl"] input[type="password"] { direction: ltr; text-align: right; }

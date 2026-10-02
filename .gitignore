@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Secrets — never commit; copy .env.example to .env and fill in
+.env
+.env.*
+!.env.example
+
+# Build output
+dist/
+build/
+
+# User uploads (competition recordings)
+server/uploads/*
+!server/uploads/.gitkeep
+
+# Logs / OS / editor
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.vscode/

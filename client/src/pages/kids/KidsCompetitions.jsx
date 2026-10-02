@@ -1,5 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import api from '../../services/api';
+import api, { API_BASE } from '../../services/api';
+import { useLanguage } from '../../i18n/LanguageContext';
+
+// Uploaded files are served from the API server root (not /api)
+const SERVER_ORIGIN = API_BASE.replace(/\/api\/?$/, '');
 import { useAuth } from '../../context/AuthContext';
 
 export default function KidsCompetitions() {
@@ -10,6 +14,7 @@ export default function KidsCompetitions() {
   const [entries, setEntries] = useState([]);
   const [showRecorder, setShowRecorder] = useState(null);
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   // Audio recorder state
   const [recording, setRecording] = useState(false);
@@ -31,9 +36,9 @@ export default function KidsCompetitions() {
   const joinCompetition = async (id) => {
     try {
       await api.post(`/competitions/${id}/join`);
-      alert('Successfully joined! 🎉');
+      alert(t('Successfully joined!') + ' 🎉');
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to join');
+      alert(t(err.response?.data?.message || 'Failed to join'));
     }
   };
 
@@ -48,10 +53,10 @@ export default function KidsCompetitions() {
   const voteForEntry = async (entryId) => {
     try {
       const r = await api.post(`/competitions/entries/${entryId}/vote`);
-      alert(r.data.message);
+      alert(t(r.data.message));
       if (selectedComp) viewEntries(selectedComp);
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to vote');
+      alert(t(err.response?.data?.message || 'Failed to vote'));
     }
   };
 
@@ -72,7 +77,7 @@ export default function KidsCompetitions() {
       mediaRecorder.start();
       setRecording(true);
     } catch (err) {
-      alert('Microphone access denied. Please allow microphone access to record.');
+      alert(t('Microphone access denied. Please allow microphone access to record.'));
     }
   };
 
@@ -92,12 +97,12 @@ export default function KidsCompetitions() {
       await api.post(`/competitions/${compId}/submit-recording`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      alert('Recording submitted! 🎉');
+      alert(t('Recording submitted!') + ' 🎉');
       setShowRecorder(null);
       setAudioBlob(null);
       setAudioUrl(null);
     } catch (err) {
-      alert(err.response?.data?.message || 'Upload failed');
+      alert(t(err.response?.data?.message || 'Upload failed'));
     }
     setUploading(false);
   };
@@ -117,26 +122,26 @@ export default function KidsCompetitions() {
       const diff = start - now;
       const days = Math.floor(diff / 86400000);
       const hours = Math.floor((diff % 86400000) / 3600000);
-      return `Starts in ${days > 0 ? days + 'd ' : ''}${hours}h`;
+      return days > 0 ? t('Starts in {d}d {h}h', { d: days, h: hours }) : t('Starts in {h}h', { h: hours });
     }
-    if (now >= start && now <= end) return '🔴 LIVE NOW';
-    return 'Ended';
+    if (now >= start && now <= end) return '🔴 ' + t('LIVE NOW');
+    return t('Ended');
   };
 
   return (
     <div className="page container">
       <div className="text-center" style={{ marginBottom: 32 }}>
         <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2rem,5vw,3rem)', fontWeight: 800 }}>
-          🏅 Competitions
+          🏅 {t('Competitions')}
         </h1>
         <p className="text-muted">
-          Join Islamic quizzes, Quran recitation, and Hadith competitions — win prizes! 🎁
+          {t('Join Islamic quizzes, Quran recitation, and Hadith competitions — win prizes!')} 🎁
         </p>
       </div>
 
       <div className="comp-tabs">
-        {[['all', '🌟 All'], ['upcoming', '📅 Upcoming'], ['live', '🔴 Live'], ['completed', '✅ Completed']].map(([k, l]) => (
-          <button key={k} className={`comp-tab ${filter === k ? 'active' : ''}`} onClick={() => setFilter(k)}>{l}</button>
+        {[['all', '🌟', 'All'], ['upcoming', '📅', 'Upcoming'], ['live', '🔴', 'Live'], ['completed', '✅', 'Completed']].map(([k, icon, l]) => (
+          <button key={k} className={`comp-tab ${filter === k ? 'active' : ''}`} onClick={() => setFilter(k)}>{icon} {t(l)}</button>
         ))}
       </div>
 
@@ -147,7 +152,7 @@ export default function KidsCompetitions() {
               <div className="comp-card-header">
                 <span className="comp-type-icon">{typeIcons[c.type]}</span>
                 <span className="comp-status-badge" style={{ background: `${statusColors[c.status]}22`, color: statusColors[c.status] }}>
-                  {c.status.toUpperCase()}
+                  {t(c.status).toUpperCase()}
                 </span>
               </div>
               <h3 className="comp-card-title">{c.title}</h3>
@@ -155,32 +160,32 @@ export default function KidsCompetitions() {
               <div className="comp-card-info">
                 <div>📅 {new Date(c.start_time).toLocaleString()}</div>
                 <div>⏱️ {getTimeStatus(c)}</div>
-                <div>👥 {c.participant_count} participants</div>
-                {c.prize_description && <div>🎁 Prize: {c.prize_description}</div>}
+                <div>👥 {t('{n} participants', { n: c.participant_count ?? 0 })}</div>
+                {c.prize_description && <div>🎁 {t('Prize')}: {c.prize_description}</div>}
               </div>
               <div className="comp-card-actions">
                 {user && (c.status === 'upcoming' || c.status === 'live') && (
-                  <button className="btn btn-primary btn-sm" onClick={() => joinCompetition(c.id)}>🏅 Join</button>
+                  <button className="btn btn-primary btn-sm" onClick={() => joinCompetition(c.id)}>🏅 {t('Join')}</button>
                 )}
                 {user && c.type === 'recitation' && (c.status === 'upcoming' || c.status === 'live') && (
-                  <button className="btn btn-accent btn-sm" onClick={() => setShowRecorder(c.id)}>🎤 Submit Recording</button>
+                  <button className="btn btn-accent btn-sm" onClick={() => setShowRecorder(c.id)}>🎤 {t('Submit Recording')}</button>
                 )}
-                <button className="btn btn-outline btn-sm" onClick={() => viewEntries(c)}>👀 View Entries</button>
+                <button className="btn btn-outline btn-sm" onClick={() => viewEntries(c)}>👀 {t('View Entries')}</button>
               </div>
 
               {/* Audio Recorder */}
               {showRecorder === c.id && (
                 <div className="recorder-panel">
-                  <h4 style={{ marginBottom: 12, fontWeight: 700 }}>🎤 Record Your Recitation</h4>
+                  <h4 style={{ marginBottom: 12, fontWeight: 700 }}>🎤 {t('Record Your Recitation')}</h4>
                   <div className="recorder-controls">
                     {!recording && !audioUrl && (
                       <button className="recorder-btn recorder-btn-start" onClick={startRecording}>
-                        <span className="rec-dot"></span> Start Recording
+                        <span className="rec-dot"></span> {t('Start Recording')}
                       </button>
                     )}
                     {recording && (
                       <button className="recorder-btn recorder-btn-stop" onClick={stopRecording}>
-                        ⏹️ Stop Recording
+                        ⏹️ {t('Stop Recording')}
                         <span className="rec-pulse"></span>
                       </button>
                     )}
@@ -189,10 +194,10 @@ export default function KidsCompetitions() {
                         <audio controls src={audioUrl} style={{ width: '100%', borderRadius: 8 }} />
                         <div className="flex gap-sm" style={{ marginTop: 8 }}>
                           <button className="btn btn-primary btn-sm" onClick={() => submitRecording(c.id)} disabled={uploading}>
-                            {uploading ? '⏳ Uploading...' : '✅ Submit'}
+                            {uploading ? '⏳ ' + t('Uploading...') : '✅ ' + t('Submit')}
                           </button>
-                          <button className="btn btn-outline btn-sm" onClick={() => { setAudioBlob(null); setAudioUrl(null); }}>🔄 Re-record</button>
-                          <button className="btn btn-danger btn-sm" onClick={cancelRecording}>✕ Cancel</button>
+                          <button className="btn btn-outline btn-sm" onClick={() => { setAudioBlob(null); setAudioUrl(null); }}>🔄 {t('Re-record')}</button>
+                          <button className="btn btn-danger btn-sm" onClick={cancelRecording}>✕ {t('Cancel')}</button>
                         </div>
                       </div>
                     )}
@@ -204,7 +209,7 @@ export default function KidsCompetitions() {
           {filtered.length === 0 && (
             <div className="text-center" style={{ gridColumn: '1 / -1', padding: 60 }}>
               <span style={{ fontSize: '4rem' }}>🏅</span>
-              <p className="text-muted" style={{ marginTop: 16 }}>No competitions found</p>
+              <p className="text-muted" style={{ marginTop: 16 }}>{t('No competitions found')}</p>
             </div>
           )}
         </div>
@@ -215,25 +220,25 @@ export default function KidsCompetitions() {
         <div className="entries-overlay" onClick={() => setSelectedComp(null)}>
           <div className="entries-modal" onClick={e => e.stopPropagation()}>
             <div className="entries-modal-header">
-              <h3>📊 {selectedComp.title} — Entries</h3>
+              <h3>📊 {selectedComp.title} — {t('Entries')}</h3>
               <button className="entries-close" onClick={() => setSelectedComp(null)}>✕</button>
             </div>
             <div className="entries-list">
               {entries.length === 0 ? (
-                <p className="text-center text-muted" style={{ padding: 40 }}>No entries yet</p>
+                <p className="text-center text-muted" style={{ padding: 40 }}>{t('No entries yet')}</p>
               ) : entries.map((entry, i) => (
                 <div key={entry.id} className="entry-item">
                   <span className="entry-rank">{i + 1}</span>
                   <div className="entry-info">
                     <span className="entry-name">{entry.name}</span>
                     {entry.audio_url && (
-                      <audio controls src={`http://localhost:5000${entry.audio_url}`} style={{ height: 32, width: '100%', marginTop: 4 }} />
+                      <audio controls src={`${SERVER_ORIGIN}${entry.audio_url}`} style={{ height: 32, width: '100%', marginTop: 4 }} />
                     )}
                   </div>
                   <div className="entry-votes">
                     <span className="entry-vote-count">{entry.vote_count || 0} 🗳️</span>
                     {user && user.id !== entry.user_id && (
-                      <button className="btn btn-sm btn-primary" onClick={() => voteForEntry(entry.id)}>Vote</button>
+                      <button className="btn btn-sm btn-primary" onClick={() => voteForEntry(entry.id)}>{t('Vote')}</button>
                     )}
                   </div>
                 </div>

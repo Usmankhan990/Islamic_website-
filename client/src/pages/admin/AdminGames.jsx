@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
+import { gameIcon, gameLabel } from '../../components/games/gameTypes';
 
 export default function AdminGames() {
   const [games, setGames] = useState([]);
@@ -16,7 +17,6 @@ export default function AdminGames() {
     setGames(games.filter(g => g.id !== id));
   };
 
-  const typeIcons = { quiz: '❓', matching: '🧩', drag_drop: '🎯', fill_blank: '✏️' };
 
   return (
     <div className="page container">
@@ -30,7 +30,7 @@ export default function AdminGames() {
           {games.map(g => (
             <div key={g.id} className="card">
               <div className="flex justify-between items-center" style={{ marginBottom: 12 }}>
-                <span style={{ fontSize: '2rem' }}>{typeIcons[g.type] || '🎮'}</span>
+                <span style={{ fontSize: '2rem' }}>{gameIcon(g.type)}</span>
                 <span className={`badge ${g.is_active ? 'badge-success' : 'badge-danger'}`}>
                   {g.is_active ? 'Active' : 'Inactive'}
                 </span>
@@ -38,7 +38,7 @@ export default function AdminGames() {
               <h3 className="heading-sm">{g.title}</h3>
               <p className="text-sm text-muted" style={{ margin: '8px 0 16px' }}>{g.description}</p>
               <div className="text-xs text-muted" style={{ marginBottom: 12 }}>
-                Type: {g.type} • Difficulty: {g.difficulty} • {g.play_count} plays
+                {gameLabel(g.type)} • {g.difficulty} • 🏁 {g.total_levels} level{g.total_levels == 1 ? '' : 's'} • 🪙 {g.coin_reward}/level • {g.play_count} plays
               </div>
               <div className="flex gap-sm">
                 <Link to={`/admin/games/edit/${g.id}`} className="btn btn-sm btn-outline" style={{ flex: 1 }}>✏️ Edit</Link>

@@ -163,7 +163,7 @@ const competitionController = {
           [entry.score, entry.rank_position, entry.notes, req.params.id, entry.user_id]
         );
       }
-      await db.query('UPDATE competitions SET status = "completed" WHERE id = ?', [req.params.id]);
+      await db.query("UPDATE competitions SET status = 'completed' WHERE id = ?", [req.params.id]);
       res.json({ message: 'Competition judged successfully.' });
     } catch (error) {
       console.error('Judge competition error:', error);

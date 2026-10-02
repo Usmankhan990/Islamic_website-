@@ -2,11 +2,14 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { gameIcon } from '../../components/games/gameTypes';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 export default function KidsGames() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [games, setGames] = useState([]);
-  const [completedIds, setCompletedIds] = useState([]);
+  const [progress, setProgress] = useState({}); // game_id -> { levels_won, total_levels, completed }
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
 
@@ -15,12 +18,12 @@ export default function KidsGames() {
       try {
         const gamesRes = await api.get('/games?active_only=true');
         setGames(gamesRes.data.games);
-        // Get user's completed games
+        // Level progress per game (games with every level won are hidden)
         if (user) {
           try {
-            const res = await api.get(`/games/completed/${user.id}`);
-            setCompletedIds(res.data.completedGameIds || []);
-          } catch {}
+            const res = await api.get('/games/progress/me');
+            setProgress(Object.fromEntries(res.data.progress.map(p => [p.game_id, p])));
+          } catch { /* not critical */ }
         }
       } catch {}
       setLoading(false);
@@ -28,28 +31,28 @@ export default function KidsGames() {
     loadGames();
   }, [user]);
 
-  // Filter out completed games
-  const availableGames = games.filter(g => !completedIds.includes(g.id));
+  // Hide games whose every level is already won; games with no questions can't be played
+  const availableGames = games.filter(g => g.total_levels > 0 && !progress[g.id]?.completed);
   const filtered = filter === 'all' ? availableGames : availableGames.filter(g => g.type === filter);
-  const typeIcons = { quiz: '❓', matching: '🧩', drag_drop: '🎯', fill_blank: '✏️' };
   const diffColors = { easy: '#22C55E', medium: '#F59E0B', hard: '#EF4444' };
 
   return (
     <div className="page container">
       <div className="text-center animate-slide-up" style={{ marginBottom: 32 }}>
         <h1 style={{ fontFamily: 'var(--font-kids)', fontSize: 'clamp(2rem,5vw,3rem)', fontWeight: 800 }}>
-          🎮 Fun Islamic Games!
+          🎮 {t('Fun Islamic Games!')}
         </h1>
         <p className="text-muted" style={{ fontSize: '1.1rem', fontFamily: 'var(--font-kids)' }}>
-          Play and learn about Islam — earn points and badges! 🌟
+          {t('Play and learn about Islam — win levels and earn coins!')} 🪙
         </p>
+        {user && <div className="kids-coin-pill">🪙 {t('{n} coins', { n: user.coins ?? 0 })}</div>}
       </div>
 
       {/* Filters */}
       <div className="tabs" style={{ marginBottom: 24, justifyContent: 'center' }}>
-        {[['all', '🎮 All'], ['quiz', '❓ Quiz'], ['matching', '🧩 Matching'], ['fill_blank', '✏️ Fill Blank']].map(([key, label]) => (
+        {[['all', '🎮', 'All'], ['quiz', '❓', 'Quiz'], ['true_false', '✅', 'True / False'], ['memory', '🃏', 'Memory Match'], ['word_jumble', '🔤', 'Word Jumble']].map(([key, icon, label]) => (
           <button key={key} className={`tab ${filter === key ? 'active' : ''}`} onClick={() => setFilter(key)}>
-            {label}
+            {icon} {t(label)}
           </button>
         ))}
       </div>
@@ -60,22 +63,26 @@ export default function KidsGames() {
         <div className="grid-3 gap-lg">
           {filtered.map((g, i) => (
             <Link to={`/kids/play/${g.id}`} key={g.id} className="game-card animate-slide-up" style={{ animationDelay: `${i * 0.1}s` }}>
-              <div className="game-card-icon">{typeIcons[g.type] || '🎮'}</div>
+              <div className="game-card-icon">{gameIcon(g.type)}</div>
               <h3 className="game-card-title">{g.title}</h3>
               <p className="game-card-desc">{g.description}</p>
+              <div className="game-card-meta">
+                <span>🏁 {t('Level {n} of {total}', { n: Math.min((progress[g.id]?.levels_won || 0) + 1, g.total_levels), total: g.total_levels })}</span>
+                <span className="game-card-coins">🪙 {t('{n} / level', { n: g.coin_reward })}</span>
+              </div>
               <div className="game-card-footer">
                 <span className="badge" style={{ background: `${diffColors[g.difficulty]}22`, color: diffColors[g.difficulty] }}>
-                  {g.difficulty}
+                  {t(g.difficulty)}
                 </span>
-                <span className="text-xs text-muted">🎯 {g.play_count} plays</span>
+                <span className="text-xs text-muted">🎯 {t('{n} plays', { n: g.play_count })}</span>
               </div>
-              <div className="game-card-play">▶ PLAY</div>
+              <div className="game-card-play">▶ {t('PLAY')}</div>
             </Link>
           ))}
           {filtered.length === 0 && (
             <div className="text-center" style={{ gridColumn: '1 / -1', padding: 60 }}>
               <span style={{ fontSize: '4rem' }}>🎮</span>
-              <p className="text-muted" style={{ marginTop: 12, fontFamily: 'var(--font-kids)' }}>No games yet! Check back soon!</p>
+              <p className="text-muted" style={{ marginTop: 12, fontFamily: 'var(--font-kids)' }}>{t('No games yet! Check back soon!')}</p>
             </div>
           )}
         </div>
@@ -102,6 +109,9 @@ export default function KidsGames() {
         .game-card-icon { font-size: 3rem; margin-bottom: 12px; }
         .game-card-title { font-family: var(--font-kids); font-size: 1.2rem; font-weight: 700; margin-bottom: 8px; }
         .game-card-desc { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px; }
+        .kids-coin-pill { display: inline-block; margin-top: 12px; padding: 8px 18px; border-radius: 999px; background: rgba(251,191,36,0.15); border: 2px solid rgba(251,191,36,0.5); color: #FBBF24; font-family: var(--font-kids); font-weight: 800; font-size: 1.1rem; }
+        .game-card-meta { display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; margin-bottom: 12px; color: var(--text-muted); }
+        .game-card-coins { color: #FBBF24; }
         .game-card-footer { display: flex; align-items: center; justify-content: space-between; }
         .game-card-play {
           position: absolute;

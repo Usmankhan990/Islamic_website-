@@ -38,7 +38,7 @@ router.get('/my-joined', auth, async (req, res) => {
        (SELECT COUNT(*) FROM competition_entries WHERE competition_id = c.id) as participant_count
        FROM competitions c 
        INNER JOIN competition_entries ce ON c.id = ce.competition_id
-       WHERE ce.user_id = ? AND c.end_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+       WHERE ce.user_id = ? AND c.end_time >= NOW() - INTERVAL '7 days'
        ORDER BY c.start_time DESC`,
       [req.user.id]
     );
@@ -57,7 +57,7 @@ router.get('/leaderboard/weekly', async (req, res) => {
        FROM competition_entries ce
        JOIN users u ON ce.user_id = u.id 
        JOIN competitions c ON ce.competition_id = c.id
-       WHERE c.end_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+       WHERE c.end_time >= NOW() - INTERVAL '7 days'
        GROUP BY u.id, u.name, u.avatar
        ORDER BY total_score DESC, best_rank ASC
        LIMIT 50`

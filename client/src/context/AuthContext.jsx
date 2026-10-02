@@ -50,8 +50,11 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  // Merge fresh fields (e.g. coins after a game) into the logged-in user
+  const updateUser = (patch) => setUser((u) => (u ? { ...u, ...patch } : u));
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout, isAdmin: user?.role === 'admin', isChild: user?.role === 'child' }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateUser, isAdmin: user?.role === 'admin', isChild: user?.role === 'child' }}>
       {children}
     </AuthContext.Provider>
   );

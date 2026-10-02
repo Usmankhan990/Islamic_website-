@@ -25,8 +25,8 @@ const aiController = {
       }
 
       // Build FULLTEXT-like search using keyword matching
-      let whereClause = searchTerms.map(() => 'keywords LIKE ?').join(' OR ');
-      whereClause += ' OR ' + searchTerms.map(() => 'answer LIKE ?').join(' OR ');
+      let whereClause = searchTerms.map(() => 'keywords ILIKE ?').join(' OR ');
+      whereClause += ' OR ' + searchTerms.map(() => 'answer ILIKE ?').join(' OR ');
       const params = [
         ...searchTerms.map(t => `%${t}%`),
         ...searchTerms.map(t => `%${t}%`)
@@ -34,8 +34,8 @@ const aiController = {
 
       const [results] = await db.query(
         `SELECT *, (
-          ${searchTerms.map((_, i) => `(CASE WHEN keywords LIKE ? THEN 3 ELSE 0 END)`).join(' + ')} +
-          ${searchTerms.map((_, i) => `(CASE WHEN answer LIKE ? THEN 1 ELSE 0 END)`).join(' + ')}
+          ${searchTerms.map((_, i) => `(CASE WHEN keywords ILIKE ? THEN 3 ELSE 0 END)`).join(' + ')} +
+          ${searchTerms.map((_, i) => `(CASE WHEN answer ILIKE ? THEN 1 ELSE 0 END)`).join(' + ')}
         ) as relevance
         FROM ai_knowledge_base
         WHERE ${whereClause}
@@ -52,7 +52,7 @@ const aiController = {
         // Try broader search with individual words
         const [broader] = await db.query(
           'SELECT * FROM ai_knowledge_base WHERE ' + 
-          searchTerms.slice(0, 3).map(() => '(keywords LIKE ? OR answer LIKE ?)').join(' OR ') +
+          searchTerms.slice(0, 3).map(() => '(keywords ILIKE ? OR answer ILIKE ?)').join(' OR ') +
           ' ORDER BY id LIMIT 3',
           searchTerms.slice(0, 3).flatMap(t => [`%${t}%`, `%${t}%`])
         );

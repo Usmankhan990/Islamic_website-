@@ -155,7 +155,7 @@ const CATEGORIES = [
 
 // Build TTS audio URL via Edge Neural TTS backend
 function ttsUrl(text, lang) {
-  return `${API_BASE}/tts?text=${encodeURIComponent(text)}&lang=${lang}&speed=slow`;
+  return `${API_BASE}/tts?text=${encodeURIComponent(text)}&lang=${lang}&speed=slow&v=3`; // v= busts cached old audio
 }
 
 export default function KidsDuas() {
